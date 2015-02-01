@@ -19,13 +19,18 @@ WHERE E.book_id = B.book_id AND B.author_id = A.author_id AND A.first_name = 'Fr
 -- Short Story and Horror books. In general, there could be two different authors
 -- with the same name, one who has written a horror book and another
 -- who has written short stories. 
-SELECT A.last_name, A.first_name
-FROM books B, authors A, subjects S
-WHERE A.book_id = B.book_id AND B.book_id = S.book_id AND S.subject = 'Short Story'
-INTERSECT 
-SELECT A.last_name, A.first_name
-FROM books B, authors A, subjects S
-WHERE A.book_id = B.book_id AND B.book_id = S.book_id AND S.subject = 'Horror';
+
+SELECT A1.last_name, A1.first_name
+FROM authors A1, 
+	(SELECT A.author_id
+	FROM books B, authors A, subjects S
+	WHERE A.author_id = B.author_id AND B.subject_id = S.subject_id AND S.subject = 'Short Story'
+	INTERSECT 
+	SELECT A.author_id
+	FROM books B, authors A, subjects S
+	WHERE A.author_id = B.author_id AND B.subject_id = S.subject_id AND S.subject = 'Horror') T
+WHERE T.author_id = A1.author_id;
+
 
 
 -- Q3: List titles, subjects, author's id, author's last name, and author's first name of all books 
@@ -37,11 +42,11 @@ WHERE A.book_id = B.book_id AND B.book_id = S.book_id AND S.subject = 'Horror';
 CREATE VIEW story_author AS 
 SELECT A.author_id, A.last_name, A.first_name
 FROM authors A, books B, subjects S
-WHERE A.author_id = B.author_id AND B.book_id = S.book_id AND S.subject = 'Short Story';
+WHERE A.author_id = B.author_id AND B.subject_id = S.subject_id AND S.subject = 'Short Story';
 
-SELECT B.title, S.subject, A.author_id, A.last_name, A.author_id
+SELECT B.title, S.subject, A.author_id, A.last_name, A.first_name
 FROM story_author A, books B, subjects S
-WHERE A.author_id = B.author_id AND B.book_id = S.book_id;
+WHERE A.author_id = B.author_id AND B.subject_id = S.subject_id;
 
 DROP VIEW story_author;
 
@@ -49,7 +54,7 @@ DROP VIEW story_author;
 -- subjects of books written by Edgar Allen Poe.
 CREATE VIEW E_subject AS
 SELECT DISTINCT S.subject_id
-FROM subject S, authors A, books B
+FROM subjects S, authors A, books B
 WHERE B.subject_id = S.subject_id AND B.author_id = A.author_id AND A.last_name = 'Poe' AND A.first_name = 'Edgar Allen';
 
 SELECT DISTINCT A.author_id, A.last_name, A.first_name
@@ -67,19 +72,19 @@ FROM books B
 GROUP BY B.author_id
 HAVING COUNT(*) > 1;
 
-SELECT DISTINCT P.name
-FROM publishers P, editions E, more_author A
-WHERE A.author_id = E.author_id AND E.publisher_id = P.publisher_id;
+SELECT DISTINCT P.name, P.publisher_id
+FROM publishers P, editions E, more_author A, books B
+WHERE A.author_id = B.author_id AND E.publisher_id = P.publisher_id AND B.book_id = E.book_id
 ORDER BY P.publisher_id ASC;
 
 DROP VIEW more_author;
 
 
 -- Q6: Find the last name and first name of authors who haven't written any book
-SELECT A.last_name, A.first_name
+SELECT DISTINCT A.last_name, A.first_name
 FROM authors A, books B
-WHERE NOT EXIST(
-				SELECT * FROM books B, authors A WHERE A.author_id = B.author_id);
+WHERE A.author_id NOT IN(
+				SELECT A.author_id FROM books B, authors A WHERE A.author_id = B.author_id);
 
 
 -- Q7: Find id of authors who have written exactly 1 book. Name the column as id. 
@@ -89,3 +94,4 @@ SELECT DISTINCT B.author_id AS id
 FROM books B
 GROUP BY B.author_id
 HAVING COUNT (*) = 1
+ORDER BY id ASC;
